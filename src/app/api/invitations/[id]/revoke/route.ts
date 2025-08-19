@@ -6,7 +6,7 @@ interface RouteParams {
   params: { id: string }
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireAuth(request)
     const invitationId = params.id

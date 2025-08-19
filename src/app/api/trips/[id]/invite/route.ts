@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireAuth, generateRandomToken } from '@/lib/auth'
-import { sendInvitationEmail } from '@/lib/email'
-import { inviteUserSchema } from '@/lib/schemas'
+import { prisma } from '../../../../../lib/prisma'
+import { requireAuth, generateRandomToken } from '../../../../../lib/auth'
+import { sendInvitationEmail } from '../../../../../lib/email'
+import { inviteUserSchema } from '../../../../../lib/schemas'
 import { addHours } from 'date-fns'
 
 interface RouteParams {

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { generateRandomToken } from '@/lib/auth'
-import { sendPasswordResetEmail } from '@/lib/email'
-import { resetPasswordRequestSchema } from '@/lib/schemas'
+import { prisma } from '../../../../lib/prisma'
+import { generateRandomToken } from '../../../../lib/auth'
+import { sendPasswordResetEmail } from '../../../../lib/email'
+import { resetPasswordRequestSchema } from '../../../../lib/schemas'
 import { addHours } from 'date-fns'
 
 export async function POST(request: NextRequest) {

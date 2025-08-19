@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-import { api } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Navigation } from '@/components/Navigation'
+import { useAuth } from '../../../contexts/AuthContext'
+import { api } from '../../../lib/api'
+import { Button } from '../../../components/ui/button'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { Textarea } from '../../../components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
+import { Badge } from '../../../components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../../components/ui/dialog'
+import { Alert, AlertDescription } from '../../../components/ui/alert'
+import { Navigation } from '../../../components/Navigation'
 import {
   Plus,
   Edit,
@@ -33,7 +33,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '../../../components/ui/dropdown-menu'
 
 interface Trip {
   id: string
@@ -74,12 +74,16 @@ interface Place {
 }
 
 interface TripDetailsPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+
+  // ✅ unwrap params
+  const { id: tripId } = React.use(params)
+
   const [trip, setTrip] = useState<Trip | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddPlace, setShowAddPlace] = useState(false)
@@ -87,31 +91,18 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const [showInvite, setShowInvite] = useState(false)
   const [editingPlace, setEditingPlace] = useState<Place | null>(null)
 
-  const [placeForm, setPlaceForm] = useState({
-    locationName: '',
-    notes: '',
-    dayNumber: 1
-  })
-
-  const [tripForm, setTripForm] = useState({
-    title: '',
-    description: '',
-    startDate: '',
-    endDate: ''
-  })
-
+  const [placeForm, setPlaceForm] = useState({ locationName: '', notes: '', dayNumber: 1 })
+  const [tripForm, setTripForm] = useState({ title: '', description: '', startDate: '', endDate: '' })
   const [inviteEmail, setInviteEmail] = useState('')
 
+  // Завантаження подорожі при логіні користувача
   useEffect(() => {
     if (!loading && !user) {
       router.push('/auth/login')
       return
     }
-
-    if (user) {
-      loadTrip()
-    }
-  }, [user, loading, router, params.id])
+    if (user) loadTrip()
+  }, [user, loading, router, tripId])
 
   useEffect(() => {
     if (trip) {
@@ -127,7 +118,7 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const loadTrip = async () => {
     try {
       setIsLoading(true)
-      const response = await api.getTrip(params.id)
+      const response = await api.getTrip(tripId)
       setTrip(response.trip)
     } catch (error) {
       toast.error('Помилка завантаження подорожі')
@@ -140,7 +131,7 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const handleAddPlace = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await api.createPlace(params.id, placeForm)
+      await api.createPlace(tripId, placeForm)
       toast.success('Місце додано!')
       setShowAddPlace(false)
       setPlaceForm({ locationName: '', notes: '', dayNumber: 1 })
@@ -153,9 +144,8 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const handleEditPlace = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingPlace) return
-
     try {
-      await api.updatePlace(params.id, editingPlace.id, placeForm)
+      await api.updatePlace(tripId, editingPlace.id, placeForm)
       toast.success('Місце оновлено!')
       setEditingPlace(null)
       setPlaceForm({ locationName: '', notes: '', dayNumber: 1 })
@@ -167,9 +157,8 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
 
   const handleDeletePlace = async (placeId: string) => {
     if (!confirm('Ви впевнені, що хочете видалити це місце?')) return
-
     try {
-      await api.deletePlace(params.id, placeId)
+      await api.deletePlace(tripId, placeId)
       toast.success('Місце видалено!')
       loadTrip()
     } catch (error) {
@@ -186,8 +175,7 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
         startDate: tripForm.startDate ? new Date(tripForm.startDate).toISOString() : null,
         endDate: tripForm.endDate ? new Date(tripForm.endDate).toISOString() : null
       }
-
-      await api.updateTrip(params.id, tripData)
+      await api.updateTrip(tripId, tripData)
       toast.success('Подорож оновлена!')
       setShowEditTrip(false)
       loadTrip()
@@ -197,10 +185,9 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   }
 
   const handleDeleteTrip = async () => {
-    if (!confirm('Ви впевнені, що хочете видалити цю подорож? Ця дія незворотня.')) return
-
+    if (!confirm('Ви впевнені, що хочете видалити цю подорож?')) return
     try {
-      await api.deleteTrip(params.id)
+      await api.deleteTrip(tripId)
       toast.success('Подорож видалена!')
       router.push('/trips')
     } catch (error) {
@@ -211,7 +198,7 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await api.inviteUser(params.id, inviteEmail)
+      await api.inviteUser(tripId, inviteEmail)
       toast.success('Запрошення надіслано!')
       setShowInvite(false)
       setInviteEmail('')
@@ -241,14 +228,11 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
     )
   }
 
-  if (!user || !trip) {
-    return null
-  }
+  if (!user || !trip) return null
 
+  // групування та сортування днів
   const groupedPlaces = trip.places.reduce((acc, place) => {
-    if (!acc[place.dayNumber]) {
-      acc[place.dayNumber] = []
-    }
+    if (!acc[place.dayNumber]) acc[place.dayNumber] = []
     acc[place.dayNumber].push(place)
     return acc
   }, {} as Record<number, Place[]>)

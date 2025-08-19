@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { hashPassword, signToken, generateRandomToken } from '@/lib/auth'
-import { sendVerificationEmail } from '@/lib/email'
-import { registerSchema } from '@/lib/schemas'
+import { prisma } from '../../../../lib/prisma'
+import { hashPassword, signToken, generateRandomToken } from '../../../../lib/auth'
+import { sendVerificationEmail } from '../../../../lib/email'
+import { registerSchema } from '../../../../lib/schemas'
 
 export async function POST(request: NextRequest) {
   try {

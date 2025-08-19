@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
-import { updatePlaceSchema } from '@/lib/schemas'
+import { prisma } from '../../../../../../lib/prisma'
+import { requireAuth } from '../../../../../../lib/auth'
+import { updatePlaceSchema } from '../../../../../../lib/schemas'
 
 interface RouteParams {
   params: { id: string; placeId: string }

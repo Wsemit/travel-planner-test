@@ -12,6 +12,17 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    plugins: {
+      import: require("eslint-plugin-import"),
+    },
+    settings: {
+      "import/resolver": {
+        typescript: {
+          alwaysTryTypes: true,
+          project: "./tsconfig.json",
+        },
+      },
+    },
     languageOptions: {
       parserOptions: {
         warnOnUnsupportedTypeScriptVersion: false,
@@ -22,6 +33,9 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       "@next/next/no-img-element": "off",
       "jsx-a11y/alt-text": "off",
+
+      // перевірка імпортів
+      "import/no-unresolved": "error",
     },
   },
 ];

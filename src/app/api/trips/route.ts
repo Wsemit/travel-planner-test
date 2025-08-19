@@ -3,6 +3,22 @@ import { prisma } from '../../../lib/prisma'
 import { requireAuth } from '../../../lib/auth'
 import { createTripSchema, searchTripsSchema } from '../../../lib/schemas'
 
+interface TripAccessEntry {
+  id: string;
+  role: string;
+  userId: string;
+  tripId: string;
+  user: {
+    id: string;
+    name?: string | null;
+    email: string;
+  };
+}
+
+interface TripWithAccess extends Exclude<Awaited<ReturnType<typeof prisma.trip.findMany>>[number], 'access'> {
+    access: TripAccessEntry[];
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request)
@@ -64,12 +80,12 @@ export async function GET(request: NextRequest) {
       orderBy: {
         [validatedQuery.sortBy!]: validatedQuery.sortOrder
       }
-    })
+    }) as TripWithAccess[]; // Cast to TripWithAccess to include the typed access
 
     // Add user role to each trip
     const tripsWithRole = trips.map(trip => {
       const isOwner = trip.ownerId === user.id
-      const userAccess = trip.access.find(access => access.userId === user.id)
+      const userAccess = trip.access.find((access: TripAccessEntry) => access.userId === user.id)
 
       return {
         ...trip,

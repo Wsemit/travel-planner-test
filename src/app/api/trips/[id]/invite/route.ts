@@ -5,18 +5,21 @@ import { sendInvitationEmail } from '../../../../../lib/email'
 import { inviteUserSchema } from '../../../../../lib/schemas'
 import { addHours } from 'date-fns'
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const user = await requireAuth(request)
 
-    // Витягаємо [id] динамічного маршруту
-    const tripId = request.nextUrl.pathname
-      .split('/')
-      .filter(Boolean)
-      .slice(-2, -1)[0] // передостанній сегмент перед 'invite'
+    const tripId = params.id; // Correctly get tripId from params
+
+    console.log('Invite API: Received tripId:', tripId); // Log tripId
 
     const body = await request.json()
     const validatedData = inviteUserSchema.parse(body)
+
+    console.log('Invite API: Validated email:', validatedData.email); // Log email
 
     // Перевірка власника подорожі
     const trip = await prisma.trip.findUnique({
@@ -25,8 +28,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (!trip) {
+      console.error('Invite API: Trip not found for ID:', tripId); // Log if trip not found
       return NextResponse.json({ error: 'Подорож не знайдена' }, { status: 404 })
     }
+
+    console.log('Invite API: Trip title:', trip.title); // Log trip title
 
     if (trip.ownerId !== user.id) {
       return NextResponse.json(
@@ -73,6 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Надсилання email
     try {
+      console.log('Attempting to send email to:', validatedData.email, 'for trip:', trip.title, 'with token:', token); // Log email details
       await sendInvitationEmail(validatedData.email, user.name || user.email, trip.title, token)
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError)

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation' // Combined and correct import for useParams
 import { useAuth } from '../../../contexts/AuthContext'
 import { api } from '../../../lib/api'
 import { Button } from '../../../components/ui/button'
@@ -34,6 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu'
+import dynamic from 'next/dynamic'; // Dynamic import for client-side rendering
 
 interface Trip {
   id: string
@@ -73,16 +74,10 @@ interface Place {
   createdAt: string
 }
 
-interface TripDetailsPageProps {
-  params: Promise<{ id: string }>
-}
-
-export default function TripDetailsPage({ params }: TripDetailsPageProps) {
+function TripDetailsPage() { // Changed to a regular function
   const { user, loading } = useAuth()
   const router = useRouter()
-
-  // ✅ unwrap params
-  const { id: tripId } = React.use(params)
+  const { id: tripId } = useParams() as { id: string }; // Correctly get tripId using useParams
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -95,13 +90,12 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const [tripForm, setTripForm] = useState({ title: '', description: '', startDate: '', endDate: '' })
   const [inviteEmail, setInviteEmail] = useState('')
 
-  // Завантаження подорожі при логіні користувача
   useEffect(() => {
     if (!loading && !user) {
       router.push('/auth/login')
       return
     }
-    if (user) loadTrip()
+    if (user && tripId) loadTrip()
   }, [user, loading, router, tripId])
 
   useEffect(() => {
@@ -116,12 +110,18 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   }, [trip])
 
   const loadTrip = async () => {
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      router.push('/trips');
+      return;
+    }
     try {
       setIsLoading(true)
       const response = await api.getTrip(tripId)
       setTrip(response.trip)
     } catch (error) {
-      toast.error('Помилка завантаження подорожі')
+      console.error('Load trip error:', error)
+      toast.error(`Помилка завантаження подорожі: ${error instanceof Error ? error.message : 'Невідома помилка'}`)
       router.push('/trips')
     } finally {
       setIsLoading(false)
@@ -130,6 +130,10 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
 
   const handleAddPlace = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       await api.createPlace(tripId, placeForm)
       toast.success('Місце додано!')
@@ -144,6 +148,10 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   const handleEditPlace = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingPlace) return
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       await api.updatePlace(tripId, editingPlace.id, placeForm)
       toast.success('Місце оновлено!')
@@ -157,6 +165,10 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
 
   const handleDeletePlace = async (placeId: string) => {
     if (!confirm('Ви впевнені, що хочете видалити це місце?')) return
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       await api.deletePlace(tripId, placeId)
       toast.success('Місце видалено!')
@@ -168,6 +180,10 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
 
   const handleEditTrip = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       const tripData = {
         title: tripForm.title,
@@ -185,7 +201,11 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
   }
 
   const handleDeleteTrip = async () => {
-    if (!confirm('Ви впевнені, що хочете видалити цю подорож?')) return
+    if (!confirm('Ви впевнені, що хочете видалити цю подорож? Ця дія незворотня.')) return
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       await api.deleteTrip(tripId)
       toast.success('Подорож видалена!')
@@ -197,6 +217,10 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!tripId) {
+      toast.error('Ідентифікатор подорожі відсутній.');
+      return;
+    }
     try {
       await api.inviteUser(tripId, inviteEmail)
       toast.success('Запрошення надіслано!')
@@ -228,11 +252,14 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
     )
   }
 
-  if (!user || !trip) return null
+  if (!user || !trip) {
+    return null
+  }
 
-  // групування та сортування днів
   const groupedPlaces = trip.places.reduce((acc, place) => {
-    if (!acc[place.dayNumber]) acc[place.dayNumber] = []
+    if (!acc[place.dayNumber]) {
+      acc[place.dayNumber] = []
+    }
     acc[place.dayNumber].push(place)
     return acc
   }, {} as Record<number, Place[]>)
@@ -626,3 +653,9 @@ export default function TripDetailsPage({ params }: TripDetailsPageProps) {
     </div>
   )
 }
+
+const DynamicTripDetailsPage = dynamic(() => Promise.resolve(TripDetailsPage), {
+  ssr: false,
+});
+
+export default DynamicTripDetailsPage;

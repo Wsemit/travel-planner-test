@@ -17,7 +17,7 @@ async function getUserTripAccess(tripId: string, userId: string) {
   return {
     trip,
     isOwner,
-    userRole: isOwner ? 'OWNER' : userAccess?.role || null,
+    userRole: isOwner ? 'OWNER' : userAccess?.role || 'VIEWER', // Default to 'VIEWER' if role is null
     hasAccess: isOwner || !!userAccess
   }
 }

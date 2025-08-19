@@ -15,7 +15,7 @@ async function checkTripAccess(tripId: string, userId: string) {
   const userAccess = trip.access[0]
   const hasAccess = isOwner || !!userAccess
 
-  return { hasAccess, trip, isOwner, userRole: isOwner ? 'OWNER' : userAccess?.role || null }
+  return { hasAccess, trip, isOwner, userRole: isOwner ? 'OWNER' : (userAccess?.role || 'VIEWER') } // Default to 'VIEWER' if role is null
 }
 
 export async function GET(request: NextRequest) {

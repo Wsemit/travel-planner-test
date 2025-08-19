@@ -1,5 +1,4 @@
 'use client'
-export const dynamic = 'force-dynamic'
 export const dynamicParams = true // примусово динамічні параметри
 
 import { useState, useEffect } from 'react'
@@ -13,8 +12,9 @@ import { Alert, AlertDescription } from '../../../components/ui/alert'
 import { Navigation } from '../../../components/Navigation'
 import { CheckCircle, XCircle, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic';
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -157,3 +157,9 @@ export default function AcceptInvitationPage() {
     </div>
   )
 }
+
+const DynamicAcceptInvitationPage = dynamic(() => Promise.resolve(AcceptInvitationPage), {
+  ssr: false,
+});
+
+export default DynamicAcceptInvitationPage;

@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...trip,
-        userRole: isOwner ? 'OWNER' : userAccess?.role || null
+        userRole: isOwner ? 'OWNER' : (userAccess?.role || 'VIEWER') // Default to 'VIEWER' if role is null
       }
     })
 

@@ -6,19 +6,28 @@ import { updateTripSchema } from '../../../../lib/schemas'
 async function getUserTripAccess(tripId: string, userId: string) {
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
-    include: { access: { where: { userId } } }
+    include: { access: true } // Include all access records to check manually
   })
 
   if (!trip) return null
 
   const isOwner = trip.ownerId === userId
-  const userAccess = trip.access[0]
+  const hasCollaboratorAccess = trip.access.some(a => a.userId === userId)
+
+  const hasAccess = isOwner || hasCollaboratorAccess
+  let userRole: 'OWNER' | 'COLLABORATOR' | 'VIEWER' = 'VIEWER';
+  if (isOwner) {
+    userRole = 'OWNER';
+  } else if (hasCollaboratorAccess) {
+    const accessEntry = trip.access.find(a => a.userId === userId);
+    userRole = accessEntry?.role as 'COLLABORATOR' || 'VIEWER';
+  }
 
   return {
     trip,
     isOwner,
-    userRole: isOwner ? 'OWNER' : userAccess?.role || 'VIEWER', // Default to 'VIEWER' if role is null
-    hasAccess: isOwner || !!userAccess
+    userRole,
+    hasAccess
   }
 }
 

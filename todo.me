@@ -1,0 +1,52 @@
+# Travel Planner - Todo List
+
+## 🚀 Setup & Configuration
+- [ ] Install dependencies (Prisma, bcryptjs, jsonwebtoken, nodemailer, etc.)
+- [ ] Setup Prisma with PostgreSQL schema
+- [ ] Configure environment variables
+- [ ] Setup database migrations
+
+## 🔐 Authentication System
+- [ ] Create User model and auth schemas
+- [ ] Build /api/auth/register endpoint
+- [ ] Build /api/auth/login endpoint  
+- [ ] Create JWT middleware
+- [ ] Build email verification system
+- [ ] Build password reset functionality
+
+## 🧳 Trips Management
+- [ ] Create Trip model and schemas
+- [ ] Build /api/trips endpoints (CRUD)
+- [ ] Implement trip ownership and ACL
+- [ ] Add date validation (startDate ≤ endDate)
+
+## 📍 Places Management  
+- [X] Create Place model and schemas
+- [X] Build /api/trips/[id]/places endpoints
+- [X] Implement dayNumber sorting and validation
+- [X] Add place CRUD with role permissions
+
+## 👥 Collaboration System
+- [X] Create Invitation model
+- [X] Build invitation email system
+- [X] Create invitation acceptance flow
+- [X] Implement role-based access control
+
+## 🎨 Frontend Components
+- [X] Create authentication pages (/register, /login)
+- [X] Build trips listing page (/trips)
+- [X] Build trip details page (/trips/[id])
+- [X] Build access management page (/trips/[id]/access)
+- [X] Add search and filtering functionality
+
+## ✨ Additional Features
+- [X] Email verification flow
+- [X] Password reset flow
+- [X] Invitation expiration (24h)
+- [X] Search/sort trips functionality
+- [X] Responsive design optimization
+
+## 🚀 Deployment
+- [X] Test all functionality
+- [ ] Create production build
+- [ ] Deploy to production

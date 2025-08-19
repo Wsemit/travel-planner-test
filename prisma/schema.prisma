@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  COLLABORATOR
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  name              String?
+  emailVerified     DateTime?
+  emailVerificationToken String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  ownedTrips        Trip[]
+  tripAccess        TripAccess[]
+  sentInvitations   Invitation[] @relation("InvitationSender")
+  receivedInvitations Invitation[] @relation("InvitationReceiver")
+
+  @@map("users")
+}
+
+model Trip {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownerId     String
+  owner       User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  places      Place[]
+  access      TripAccess[]
+  invitations Invitation[]
+
+  @@map("trips")
+}
+
+model Place {
+  id           String @id @default(cuid())
+  locationName String
+  notes        String?
+  dayNumber    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  tripId       String
+  trip         Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("places")
+}
+
+model TripAccess {
+  id        String   @id @default(cuid())
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId    String
+  trip      Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tripId])
+  @@map("trip_access")
+}
+
+model Invitation {
+  id         String           @id @default(cuid())
+  email      String
+  token      String           @unique
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  // Relations
+  senderId   String
+  sender     User @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String?
+  receiver   User? @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: SetNull)
+  tripId     String
+  trip       Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([email, tripId, status])
+  @@map("invitations")
+}

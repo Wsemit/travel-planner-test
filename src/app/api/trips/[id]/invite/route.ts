@@ -5,30 +5,27 @@ import { sendInvitationEmail } from '../../../../../lib/email'
 import { inviteUserSchema } from '../../../../../lib/schemas'
 import { addHours } from 'date-fns'
 
-interface RouteParams {
-  params: { id: string }
-}
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request)
-    const tripId = params.id
+
+    // Витягаємо [id] динамічного маршруту
+    const tripId = request.nextUrl.pathname
+      .split('/')
+      .filter(Boolean)
+      .slice(-2, -1)[0] // передостанній сегмент перед 'invite'
+
     const body = await request.json()
     const validatedData = inviteUserSchema.parse(body)
 
-    // Check if user is the owner of the trip
+    // Перевірка власника подорожі
     const trip = await prisma.trip.findUnique({
       where: { id: tripId },
-      include: {
-        owner: true
-      }
+      include: { owner: true }
     })
 
     if (!trip) {
-      return NextResponse.json(
-        { error: 'Подорож не знайдена' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Подорож не знайдена' }, { status: 404 })
     }
 
     if (trip.ownerId !== user.id) {
@@ -38,20 +35,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Check if user is trying to invite themselves
     if (validatedData.email === user.email) {
-      return NextResponse.json(
-        { error: 'Ви не можете запросити самого себе' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Ви не можете запросити самого себе' }, { status: 400 })
     }
 
-    // Check if user is already a collaborator
+    // Перевірка існуючого доступу
     const existingAccess = await prisma.tripAccess.findFirst({
-      where: {
-        tripId,
-        user: { email: validatedData.email }
-      }
+      where: { tripId, user: { email: validatedData.email } }
     })
 
     if (existingAccess) {
@@ -61,13 +51,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Check if there's already a pending invitation
+    // Перевірка існуючого запрошення
     const existingInvitation = await prisma.invitation.findFirst({
-      where: {
-        tripId,
-        email: validatedData.email,
-        status: 'PENDING'
-      }
+      where: { tripId, email: validatedData.email, status: 'PENDING' }
     })
 
     if (existingInvitation) {
@@ -77,41 +63,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Generate invitation token
+    // Генерація токена та створення запрошення
     const token = generateRandomToken()
-    const expiresAt = addHours(new Date(), 24) // 24 hours from now
+    const expiresAt = addHours(new Date(), 24)
 
-    // Create invitation
     const invitation = await prisma.invitation.create({
-      data: {
-        email: validatedData.email,
-        token,
-        expiresAt,
-        senderId: user.id,
-        tripId
-      }
+      data: { email: validatedData.email, token, expiresAt, senderId: user.id, tripId }
     })
 
-    // Send invitation email
+    // Надсилання email
     try {
-      await sendInvitationEmail(
-        validatedData.email,
-        user.name || user.email,
-        trip.title,
-        token
-      )
+      await sendInvitationEmail(validatedData.email, user.name || user.email, trip.title, token)
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError)
-
-      // Delete the invitation if email fails
-      await prisma.invitation.delete({
-        where: { id: invitation.id }
-      })
-
-      return NextResponse.json(
-        { error: 'Помилка надсилання запрошення' },
-        { status: 500 }
-      )
+      await prisma.invitation.delete({ where: { id: invitation.id } })
+      return NextResponse.json({ error: 'Помилка надсилання запрошення' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -127,22 +93,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     console.error('Invite user error:', error)
 
     if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Необхідна авторизація' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Необхідна авторизація' }, { status: 401 })
     }
 
     if (error instanceof Error && error.name === 'ZodError') {
-      return NextResponse.json(
-        { error: 'Невірні дані', details: error },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Невірні дані', details: error }, { status: 400 })
     }
 
-    return NextResponse.json(
-      { error: 'Помилка надсилання запрошення' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Помилка надсилання запрошення' }, { status: 500 })
   }
 }

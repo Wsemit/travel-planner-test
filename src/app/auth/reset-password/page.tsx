@@ -1,5 +1,6 @@
 'use client'
-
+export const dynamic = 'force-dynamic' // ⚡ вимикає SSG/ISR, примусово динамічна сторінка
+export const dynamicParams = true
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -16,39 +17,31 @@ import { CheckCircle, XCircle } from 'lucide-react'
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token')
-
-  const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: ''
-  })
+  
+  const [token, setToken] = useState<string | null>(null)
+  const [formData, setFormData] = useState({ password: '', confirmPassword: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!token) {
+    const t = searchParams.get('token')
+    if (!t) {
       setError('Токен відновлення не надано')
+      return
     }
-  }, [token])
+    setToken(t)
+  }, [searchParams])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!token) return
     setIsLoading(true)
     setError('')
-
-    if (!token) {
-      setError('Невірний токен відновлення')
-      setIsLoading(false)
-      return
-    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Паролі не співпадають')
@@ -77,7 +70,6 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-
         <div className="container mx-auto px-4 py-8 max-w-md">
           <Card>
             <CardContent className="text-center py-8">
@@ -99,7 +91,6 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-
       <div className="container mx-auto px-4 py-8 max-w-md">
         <Card>
           <CardHeader className="text-center">

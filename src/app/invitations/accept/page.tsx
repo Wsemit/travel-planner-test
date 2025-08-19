@@ -1,4 +1,6 @@
 'use client'
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true // примусово динамічні параметри
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -16,49 +18,53 @@ export default function AcceptInvitationPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token')
 
+  const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [trip, setTrip] = useState<any>(null)
   const [needsLogin, setNeedsLogin] = useState(false)
 
+  // Отримуємо токен тільки на клієнті
   useEffect(() => {
-    if (!token) {
+    const t = searchParams.get('token')
+    if (!t) {
       setError('Токен запрошення не надано')
       setIsLoading(false)
       return
     }
+    setToken(t)
+  }, [searchParams])
 
-    if (!loading) {
-      acceptInvitation()
-    }
-  }, [token, loading, user])
+  // Приймаємо запрошення після того, як токен і завантаження користувача готові
+  useEffect(() => {
+    if (!token || loading) return
 
-  const acceptInvitation = async () => {
-    try {
+    const acceptInvitation = async () => {
       setIsLoading(true)
-      const response = await api.acceptInvitation(token!)
-
-      if (response.redirectToLogin) {
-        setNeedsLogin(true)
-        setError('Для прийняття запрошення необхідно увійти в систему')
-      } else {
-        setSuccess(true)
-        setTrip(response.trip)
-        toast.success('Запрошення прийнято!')
+      try {
+        const response = await api.acceptInvitation(token)
+        if (response.redirectToLogin) {
+          setNeedsLogin(true)
+          setError('Для прийняття запрошення необхідно увійти в систему')
+        } else {
+          setSuccess(true)
+          setTrip(response.trip)
+          toast.success('Запрошення прийнято!')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Помилка прийняття запрошення')
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Помилка прийняття запрошення')
-    } finally {
-      setIsLoading(false)
     }
-  }
+
+    acceptInvitation()
+  }, [token, loading])
 
   const handleLoginRedirect = () => {
-    // Store the invitation token to use after login
-    localStorage.setItem('pending_invitation_token', token!)
+    if (token) localStorage.setItem('pending_invitation_token', token)
     router.push('/auth/login')
   }
 
@@ -66,15 +72,12 @@ export default function AcceptInvitationPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-
         <div className="container mx-auto px-4 py-8 max-w-md">
           <Card>
             <CardContent className="text-center py-8">
               <XCircle className="mx-auto h-12 w-12 text-red-600 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Невірне посилання</h3>
-              <p className="text-gray-600 mb-6">
-                Посилання запрошення невірне або не надано.
-              </p>
+              <p className="text-gray-600 mb-6">Посилання запрошення невірне або не надано.</p>
               <Link href="/">
                 <Button>На головну</Button>
               </Link>
@@ -88,14 +91,11 @@ export default function AcceptInvitationPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-
       <div className="container mx-auto px-4 py-8 max-w-md">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Запрошення до співпраці</CardTitle>
-            <CardDescription>
-              Прийняття запрошення для участі в подорожі
-            </CardDescription>
+            <CardDescription>Прийняття запрошення для участі в подорожі</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             {isLoading ? (
@@ -107,15 +107,8 @@ export default function AcceptInvitationPage() {
               <div className="py-8">
                 <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Запрошення прийнято!</h3>
-                <p className="text-gray-600 mb-2">
-                  Ви успішно приєдналися до подорожі
-                </p>
-                {trip && (
-                  <p className="font-medium text-gray-900 mb-6">"{trip.title}"</p>
-                )}
-                <p className="text-sm text-gray-500 mb-6">
-                  Тепер ви можете додавати місця та співпрацювати з іншими учасниками.
-                </p>
+                <p className="text-gray-600 mb-2">Ви успішно приєдналися до подорожі</p>
+                {trip && <p className="font-medium text-gray-900 mb-6">"{trip.title}"</p>}
                 <div className="space-y-2">
                   {trip && (
                     <Link href={`/trips/${trip.id}`} className="block">
@@ -132,14 +125,10 @@ export default function AcceptInvitationPage() {
                 <Users className="mx-auto h-12 w-12 text-blue-600 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Необхідна авторизація</h3>
                 <Alert className="mb-6">
-                  <AlertDescription>
-                    Для прийняття запрошення спочатку увійдіть в систему або створіть акаунт.
-                  </AlertDescription>
+                  <AlertDescription>Для прийняття запрошення спочатку увійдіть в систему або створіть акаунт.</AlertDescription>
                 </Alert>
                 <div className="space-y-2">
-                  <Button onClick={handleLoginRedirect} className="w-full">
-                    Увійти в акаунт
-                  </Button>
+                  <Button onClick={handleLoginRedirect} className="w-full">Увійти в акаунт</Button>
                   <Link href="/auth/register" className="block">
                     <Button variant="outline" className="w-full">Створити акаунт</Button>
                   </Link>
@@ -152,9 +141,6 @@ export default function AcceptInvitationPage() {
                 <Alert variant="destructive" className="mb-6">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
-                <p className="text-gray-600 mb-6">
-                  Можливо, запрошення прострочено або вже було використано.
-                </p>
                 <div className="space-y-2">
                   <Link href="/trips" className="block">
                     <Button className="w-full">Мої подорожі</Button>

@@ -1,5 +1,5 @@
 'use client'
-
+export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
@@ -13,32 +13,40 @@ import Link from 'next/link'
 export default function VerifyEmailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token')
 
+  const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
+  // Встановлюємо токен лише на клієнті
   useEffect(() => {
-    if (!token) {
+    const t = searchParams.get('token')
+    if (!t) {
       setError('Токен верифікації не надано')
       setIsLoading(false)
       return
     }
+    setToken(t)
+  }, [searchParams])
+
+  // Виконуємо верифікацію після отримання токена
+  useEffect(() => {
+    if (!token) return
+
+    const verifyEmail = async () => {
+      try {
+        await api.verifyEmail(token)
+        setSuccess(true)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Помилка верифікації email')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
     verifyEmail()
   }, [token])
-
-  const verifyEmail = async () => {
-    try {
-      await api.verifyEmail(token!)
-      setSuccess(true)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Помилка верифікації email')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,9 +56,7 @@ export default function VerifyEmailPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Верифікація Email</CardTitle>
-            <CardDescription>
-              Підтвердження вашої email адреси
-            </CardDescription>
+            <CardDescription>Підтвердження вашої email адреси</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             {isLoading ? (
@@ -63,13 +69,13 @@ export default function VerifyEmailPage() {
                 <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Email підтверджено!</h3>
                 <p className="text-gray-600 mb-6">
-                  Ваша email адреса успішно підтверджена. Тепер ви можете користуватися всіма функціями сервісу.
+                  Ваша email адреса успішно підтверджена.
                 </p>
                 <div className="space-y-2">
-                  <Link href="/trips" className="block">
+                  <Link href="/trips">
                     <Button className="w-full">Перейти до подорожей</Button>
                   </Link>
-                  <Link href="/auth/login" className="block">
+                  <Link href="/auth/login">
                     <Button variant="outline" className="w-full">Увійти в акаунт</Button>
                   </Link>
                 </div>
@@ -81,14 +87,11 @@ export default function VerifyEmailPage() {
                 <Alert variant="destructive" className="mb-6">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
-                <p className="text-gray-600 mb-6">
-                  Можливо, токен прострочений або невірний. Спробуйте зареєструватися знову або зв'яжіться з підтримкою.
-                </p>
                 <div className="space-y-2">
-                  <Link href="/auth/register" className="block">
+                  <Link href="/auth/register">
                     <Button className="w-full">Реєстрація</Button>
                   </Link>
-                  <Link href="/auth/login" className="block">
+                  <Link href="/auth/login">
                     <Button variant="outline" className="w-full">Увійти в акаунт</Button>
                   </Link>
                 </div>
